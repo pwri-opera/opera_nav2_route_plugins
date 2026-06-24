@@ -1,0 +1,13 @@
+<class_libraries>
+  <library path="route_operations">
+    <class type="opera_nav2_route_plugins::OperaRouteVisualizer" base_class_type="nav2_route::RouteOperation">
+      <description>Route tracking operation to adjust speed limit based on graph metadata</description>
+    </class>
+  </library>
+
+  <library path="graph_file_loaders">
+    <class type="nav2_route::OperaGeoJsonGraphFileLoader" base_class_type="nav2_route::GraphFileLoader">
+      <description>Parse the geojson graph file into the graph data type</description>
+    </class>
+  </library>
+</class_libraries>
