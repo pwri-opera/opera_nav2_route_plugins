@@ -152,7 +152,8 @@ protected:
   rclcpp_lifecycle::LifecyclePublisher<visualization_msgs::msg::MarkerArray>::SharedPtr markers_pub_;
   std::string route_frame_;
   
-  std::vector<Json> areas_;
+  std::vector<Json> json_nodes_, areas_;
+  Graph graph_;
   rclcpp::Service<opera_bt_msgs::srv::GetArea>::SharedPtr get_area_service_;
 };
 

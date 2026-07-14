@@ -81,6 +81,8 @@ bool OperaGeoJsonGraphFileLoader::loadGraphFromFile(
   addNodesToGraph(graph, graph_to_id_map, nodes);
   addEdgesToGraph(graph, graph_to_id_map, edges);
 
+  json_nodes_ = nodes;  // Store the nodes for later use in getAreaCallback
+
   // polygon
   visualization_msgs::msg::MarkerArray markers_msg;
   for (const auto & polygon : areas_){
@@ -126,6 +128,10 @@ void OperaGeoJsonGraphFileLoader::getAreaCallback(
   std::shared_ptr<opera_bt_msgs::srv::GetArea::Response> response)
 {
   response->area_id = 0;
+  response->entry_node_id = 0;
+  response->exit_node_id = 0;
+  response->entry_node_pose = geometry_msgs::msg::PoseStamped();
+  response->exit_node_pose = geometry_msgs::msg::PoseStamped();
 
   if (areas_.size() == 0){
     RCLCPP_ERROR(logger_, "[getAreaCallback] areas_.len() == 0.");
@@ -152,6 +158,43 @@ void OperaGeoJsonGraphFileLoader::getAreaCallback(
       unsigned int area_id = area["properties"]["id"];
       RCLCPP_INFO(logger_, "[getAreaCallback] your area is %d", area_id);
       response->area_id = area_id;
+      response->entry_node_id = area["properties"]["entry_node_ids"][0];
+      response->exit_node_id = area["properties"]["exit_node_ids"][0];
+
+      response->entry_node_pose = geometry_msgs::msg::PoseStamped();
+      
+      // Find the entry node in json_nodes_ by matching the entry_node_id
+      auto it = std::find_if(json_nodes_.begin(), json_nodes_.end(),
+        [&](const Json & node) {
+          return node["properties"]["id"] == response->entry_node_id;
+        });
+      // if the entry node is found, convert first coordinates to PoseStamped
+      if (it != json_nodes_.end()) {
+        auto coords = convertCoordinatesFromJson(*it);
+        response->entry_node_pose.header.frame_id = coords.frame_id;
+        response->entry_node_pose.pose.position.x = coords.x;
+        response->entry_node_pose.pose.position.y = coords.y;
+        response->entry_node_pose.pose.orientation.w = 1.0;
+      } else {
+        RCLCPP_ERROR(logger_, "[getAreaCallback] entry node id %d not found in GeoJson nodes", response->entry_node_id);
+      }
+      
+      // Find the exit node in json_nodes_ by matching the exit_node_id
+      auto it_exit = std::find_if(json_nodes_.begin(), json_nodes_.end(),
+        [&](const Json & node) {
+          return node["properties"]["id"] == response->exit_node_id;
+        });
+      // if the exit node is found, convert first coordinates to PoseStamped
+      if (it_exit != json_nodes_.end()) {
+        auto coords_exit = convertCoordinatesFromJson(*it_exit);
+        response->exit_node_pose.header.frame_id = coords_exit.frame_id;
+        response->exit_node_pose.pose.position.x = coords_exit.x;
+        response->exit_node_pose.pose.position.y = coords_exit.y;
+        response->exit_node_pose.pose.orientation.w = 1.0;
+      } else {
+        RCLCPP_ERROR(logger_, "[getAreaCallback] exit node id %d not found in GeoJson nodes", response->exit_node_id);
+      }
+      
       return;
     }
   }
